@@ -1,0 +1,32 @@
+#! /bin/bash
+
+#########
+# example plugin conf
+#
+# [snmp_hostname_mikrotik_*]
+# env.snmpopts -l authNoPriv -u MyUser -a SHA -A MyPassword -r 2
+# env.numcpu 4
+
+snmphost=$(echo $0 | cut -f2 -d _)
+
+#########
+# config
+if [ "$1" == "config" ]; then
+	echo "host_name $snmphost"
+	echo "graph_args -l 0 -u 100 -r"
+	echo "graph_title CPU usage"
+	echo "graph_category system"
+	echo "graph_vlabel %";
+	for i in $(seq ${numcpu:-1}); do
+		echo "cpu$i.label CPU$i"
+	done
+	exit 0
+fi
+
+#########
+# data
+for i in $(seq ${numcpu:-1}); do
+	v=$(snmpget $snmpopts ${snmphost:-127.0.0.1} -Ov -OQ .1.3.6.1.2.1.25.3.3.1.2.$i 2>/dev/null)
+	[ $? -gt 0 ] && v=N
+	echo "cpu$i.value $v"
+done

@@ -1,0 +1,97 @@
+#! /bin/bash
+
+##############
+# Munin plugin to report squid traffic statistics
+
+if [ "$1" = "config" ]; then
+        # basic
+        echo 'graph_title Squid traffic'
+        echo 'graph_category squid'
+	echo 'graph_vlabel bits in (-) / out (+) per ${graph_period}'
+        echo 'graph_info reports squid traffic statistics'
+
+        # data sources
+	echo 'cin.label clients'
+	echo 'cin.cdef cin,8096,*'
+	echo 'cin.type DERIVE'
+	echo 'cin.min 0'
+	echo 'cin.max 50000'
+	echo 'cin.graph no'
+	echo 'cout.negative cin'
+	echo 'cout.label clients'
+	echo 'cout.info Traffic from talking with clients'
+	echo 'cout.cdef cout,8096,*'
+	echo 'cout.type DERIVE'
+	echo 'cout.min 0'
+	echo 'cout.max 50000'
+	echo 'cout.draw AREASTACK'
+	echo 'cout.colour 057D9F'
+	#echo 'cout.colour COLOUR1'
+
+	echo 'sin.label servers'
+	echo 'sin.cdef sin,8096,*'
+	echo 'sin.type DERIVE'
+	echo 'sin.min 0'
+	echo 'sin.max 50000'
+	echo 'sin.graph no'
+	echo 'sout.negative sin'
+	echo 'sout.label servers'
+	echo 'sout.info Traffic from fetching content from servers'
+	echo 'sout.cdef sout,8096,*'
+	echo 'sout.type DERIVE'
+	echo 'sout.min 0'
+	echo 'sout.max 50000'
+	echo 'sout.draw AREASTACK'
+	echo 'sout.colour COLOUR3'
+	#echo 'sout.colour COLOUR2'
+
+	echo 'icpin.label peers'
+	echo 'icpin.cdef icpin,8096,*'
+	echo 'icpin.type DERIVE'
+	echo 'icpin.min 0'
+	echo 'icpin.max 50000'
+	echo 'icpin.graph no'
+	echo 'icpout.negative icpin'
+	echo 'icpout.label peers'
+	echo 'icpout.info Traffic via ICP with our peers'
+	echo 'icpout.cdef icpout,8096,*'
+	echo 'icpout.type DERIVE'
+	echo 'icpout.min 0'
+	echo 'icpout.max 50000'
+	echo 'icpout.draw AREASTACK'
+	echo 'icpout.colour 00BD39'
+	#echo 'icpout.colour COLOUR3'
+
+	echo 'chit.label hits'
+	echo 'chit.info Traffic to clients containing hits'
+	echo 'chit.cdef chit,8096,*'
+	echo 'chit.type DERIVE'
+	echo 'chit.min 0'
+	echo 'chit.max 50000'
+	echo 'chit.draw LINE1'
+	echo 'chit.colour FF8100'
+	#echo 'chit.colour COLOUR0'
+
+        exit 0
+fi
+
+# get data
+#curl -s ${squidhost:-localhost}:${squidport:-3128}/squid-internal-mgr/counters | while read line
+squidclient -h ${squidhost:-localhost} -p ${squidport:-3128} mgr:counters | while read line
+do
+	if [[ "$line" == "client_http.kbytes_in"* ]]; then
+		echo 'cin.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "client_http.kbytes_out"* ]]; then
+		echo 'cout.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "client_http.hit_kbytes_out"* ]]; then
+		echo 'chit.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "server.all.kbytes_in"* ]]; then
+		echo 'sin.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "server.all.kbytes_out"* ]]; then
+		echo 'sout.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "icp.kbytes_recv"* ]]; then
+		echo 'icpin.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "icp.kbytes_sent"* ]]; then
+		echo 'icpout.value'$(echo $line | cut -f2 -d "=")
+	fi
+done

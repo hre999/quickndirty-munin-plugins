@@ -1,0 +1,71 @@
+#!/bin/bash
+
+##########
+# config
+
+if [ "$1" = "config" ]; then
+	echo "multigraph apc_volt"
+	echo "graph_title APC - Volts"
+	echo "graph_args --base 1000"
+	echo "graph_category power"
+	echo "linev.label Line In"
+	echo "battv.label Battery"
+	
+	echo "multigraph apc_pct"
+	echo "graph_title APC - %"
+	echo "graph_args --base 1000"
+	echo "graph_category power"
+	echo "load.label Load capacity"
+	echo "bcharge.label Battery charge"
+
+	echo "multigraph apc_watt"
+	echo "graph_title APC - Watts"
+	echo "graph_args --base 1000"
+	echo "graph_category power"
+	echo "load.label Power output"
+	echo "load.warning 540"
+
+	echo "multigraph apc_time"
+	echo "graph_title APC - Time"
+	echo "graph_args --base 1000"
+	echo "graph_category power"
+	echo "timeleft.label runtime left on battery (mins)"
+	echo "tonbatt.label time on battery power (seconds)"
+
+exit 0
+fi
+
+
+##########
+# data
+
+outv="multigraph apc_volt\n"
+outt="multigraph apc_time\n"
+outp="multigraph apc_pct\n"
+while read line; do
+	case $line in
+		LINEV*)		outv+="linev.value $(echo $line |cut -f2 -d ':')\n"	;;
+		BATTV*)		outv+="battv.value $(echo $line |cut -f2 -d ':')\n"	;;
+		#NOMINV*)	outv+="nominv.value $(echo $line |cut -f2 -d ':')"	;;
+		#NOMBATTV*)	outv+="nombattv.value $(echo $line |cut -f2 -d ':')"	;;
+
+		BCHARGE*)	outp+="bcharge.value $(echo $line |cut -f2 -d ':')\n"	;;
+		LOADPCT*)	load=$(echo $line |cut -f2 -d ':')
+				outp+="load.value $load\n"		;;
+
+		NOMPOWER*)	nompwr=$(echo $line |cut -f2 -d ':')	;;
+
+		TIMELEFT*)	outt+="timeleft.value $(echo $line |cut -f2 -d ':')\n"	;;
+		TONBATT*)	tonbatt=$(echo $line |cut -f2 -d ':')
+				outt+="tonbatt.value $((tonbatt/60))\n"	;;
+	esac
+done < <( apcaccess -u )
+
+# Output
+echo -en $outv
+echo -en $outp
+echo -en $outt
+
+load=${load%\.[0-9]}
+echo "multigraph apc_watt"
+echo "load.value $((load*nompwr/100))"

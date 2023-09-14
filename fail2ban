@@ -1,0 +1,15 @@
+#! /bin/bash
+
+if [ "$1" == "config" ]; then
+	echo "graph_title fail2ban: banned hosts"
+	echo "graph_category other"
+	echo "graph_info banned hosts by jail"
+
+	for j in $jails; do
+		echo "$j.label $j" | tr - _
+	done
+else
+	for j in $jails; do
+		echo $j.value $(fail2ban-client status $j | grep 'Currently banned' | tr -dc [:digit:]) | tr - _
+	done
+fi

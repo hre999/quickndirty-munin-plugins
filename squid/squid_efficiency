@@ -1,0 +1,66 @@
+#! /bin/bash
+
+##############
+# Munin plugin to report cache efficiency
+
+if [ "$1" = "config" ]; then
+        # basic
+        echo 'graph_title Cache efficiency'
+        echo 'graph_category squid'
+	echo 'graph_vlabel %'
+        echo 'graph_info reports squid cache efficiency'
+	echo 'graph_args -u 100 -l 0 -r'
+	echo 'graph_scale no'
+
+        # data sources
+	echo 'mhits.label Hits from Memory'
+	echo 'mhits.draw AREASTACK'
+	echo 'mhits.info Memory hits as % of hit requests'
+	echo 'mhits.colour 024C61'
+
+	echo 'dhits.label Hits from Disk'
+	echo 'dhits.draw AREASTACK'
+	echo 'dhits.info Disk hits as % of hit requests'
+	echo 'dhits.colour 04617C'
+
+	echo 'ohits.label other Hits (error/abort/etc)'
+	echo 'ohits.draw AREASTACK'
+	echo 'ohits.info hits that are not TCP_HIT or TCP_MEM_HIT'
+	echo 'ohits.colour 278CA8'
+
+	echo 'hits.label Hitrate by requests'
+	echo 'hits.info Hits as % of all requests'
+	echo 'hits.draw LINE2'
+	echo 'hits.colour FF8100'
+
+#	echo 'miss.label Miss/Error by requests'
+#	echo 'miss.info Miss/Error as % of all requests'
+#	echo 'miss.draw AREASTACK'
+#	echo 'miss.graph no'
+
+	echo 'bhits.label Hitrate by bytes'
+	echo 'bhits.draw LINE1'
+	echo 'bhits.info Hits as % of bytes sent'
+	echo 'bhits.colour 00BD39'
+        exit 0
+fi
+
+# get data
+#curl -s ${squidhost:-localhost}:${squidport:-3128}/squid-internal-mgr/info | while read line
+squidclient -h ${squidhost:-localhost} -p ${squidport:-3128} mgr:info | while read line
+do
+	if [[ "$line" == "Hits as % of all requests:"* ]]; then
+		#hits=$(echo $line | cut -f4 -d ":" | tr -d " %")
+		echo 'hits.value '$(echo $line | cut -f4 -d ":" | tr -d " %")
+		#echo 'miss.value '$(echo 100-$hits | bc)
+	elif [[ "$line" == "Hits as % of bytes sent:"* ]]; then
+		echo 'bhits.value '$(echo $line | cut -f4 -d ":" | tr -d " %")
+	elif [[ "$line" == "Memory hits as % of hit requests:"* ]]; then
+		mhits=$(echo $line | cut -f4 -d ":" | tr -d " %")
+		echo 'mhits.value '$mhits
+	elif [[ "$line" == "Disk hits as % of hit requests:"* ]]; then
+		dhits=$(echo $line | cut -f4 -d ":" | tr -d " %")
+		echo 'dhits.value '$dhits
+		echo 'ohits.value '$(echo 100-$dhits-$mhits | bc)
+	fi
+done

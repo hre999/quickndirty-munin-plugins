@@ -1,0 +1,56 @@
+#! /bin/bash
+
+#########
+# example plugin conf
+#
+# [snmp_hostname_mikrotik_*]
+# env.snmpopts -l authNoPriv -u MyUser -a SHA -A MyPassword -r 2
+# env.storageID 65536 <- this one is optional, when linked as _mem oder _disk, it will set a default OID. Set if your storage has a different id.
+
+snmphost=$(echo $0 | cut -f2 -d _)
+
+#########
+# config
+if [ "$1" == "config" ]; then
+	echo "host_name $snmphost"
+	echo "graph_args --base 1024 -l 0"
+	echo "graph_vlabel Bytes"
+	echo "total.label total"
+	echo "total.draw AREA"
+	echo "used.label used"
+	echo "used.draw AREA"
+	if [ "$(echo $0 | cut -f4 -d _)" == "mem" ]; then
+		echo "graph_title Memory usage"
+		echo "graph_category system"
+	else
+		echo "graph_title disk usage"
+		echo "graph_category disk"
+	fi
+	exit 0
+fi
+
+#########
+# data
+
+if [ "$(echo $0 | cut -f4 -d _)" == "mem" ]; then
+	storageID=65536
+elif [ "$(echo $0 | cut -f4 -d _)" == "disk" ]; then
+	storageID=131072
+fi
+
+au=$(snmpget $snmpopts ${snmphost:-127.0.0.1} -Ov -OQ .1.3.6.1.2.1.25.2.3.1.4.$storageID 2>/dev/null)
+t=$(snmpget $snmpopts ${snmphost:-127.0.0.1} -Ov -OQ .1.3.6.1.2.1.25.2.3.1.5.$storageID 2>/dev/null)
+if [ $? -gt 0 ]; then
+	t=N
+else
+	t=$((t*au))
+fi
+u=$(snmpget $snmpopts ${snmphost:-127.0.0.1} -Ov -OQ .1.3.6.1.2.1.25.2.3.1.6.$storageID 2>/dev/null)
+if [ $? -gt 0 ]; then
+	u=N
+else
+	u=$((u*au))
+fi
+
+echo "total.value $t"
+echo "used.value $u"

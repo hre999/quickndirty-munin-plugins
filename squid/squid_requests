@@ -1,0 +1,101 @@
+#! /bin/bash
+
+##############
+# Munin plugin to report cache requests
+
+if [ "$1" = "config" ]; then
+        # basic
+        echo 'graph_title Squid requests'
+        echo 'graph_category squid'
+	echo 'graph_vlabel client (-) / server (+) requests per ${graph_period}'
+        echo 'graph_info reports requests'
+
+        # data sources
+	echo 'creqs.label requests'
+	echo 'creqs.info Requests recieved from clients (-) and requests send to servers (+)'
+	echo 'creqs.type DERIVE'
+	echo 'creqs.min 0'
+	echo 'creqs.max 50000'
+	echo 'creqs.graph no'
+	echo 'sreqs.negative creqs'
+	echo 'sreqs.label requests'
+	echo 'sreqs.info Requests recieved from clients (-) and requests send to servers (+)'
+	echo 'sreqs.type DERIVE'
+	echo 'sreqs.min 0'
+	echo 'sreqs.max 50000'
+	echo 'sreqs.draw AREA'
+	echo 'sreqs.colour 057D9F'
+	#echo 'sreqs.colour COLOUR1'
+
+	echo 'cerrs.label errors'
+	echo 'cerrs.info Client requests resulting in errors (-) and Server requests resulting in errors (+)'
+	echo 'cerrs.type DERIVE'
+	echo 'cerrs.min 0'
+	echo 'cerrs.max 50000'
+	echo 'cerrs.graph no'
+	echo 'serrs.negative cerrs'
+	echo 'serrs.label errors'
+	echo 'serrs.info Client requests resulting in errors (-) and Server requests resulting in errors (+)'
+	echo 'serrs.type DERIVE'
+	echo 'serrs.min 0'
+	echo 'serrs.max 50000'
+	echo 'serrs.draw AREA'
+	echo 'serrs.colour COLOUR3'
+	#echo 'serrs.colour COLOUR2'
+
+	echo 'chits.label hits'
+	echo 'chits.info Client requests resulting in hits'
+	echo 'chits.type DERIVE'
+	echo 'chits.min 0'
+	echo 'chits.max 50000'
+	echo 'chits.graph no'
+#	echo 'chits.cdef 0'
+	echo 'shits.negative chits'
+	echo 'shits.label hits'
+	echo 'shits.info Client requests resulting in hits'
+	echo 'shits.type DERIVE'
+	echo 'shits.min 0'
+	echo 'shits.max 50000'
+	echo 'shits.draw STACK'
+	echo 'shits.colour FF8100'
+	#echo 'shits.colour COLOUR0'
+
+	echo 'icprcvd.label icp requests'
+	echo 'icprcvd.info ICP requests recieved (-) and ICP requests sent (+)'
+	echo 'icprcvd.type DERIVE'
+	echo 'icprcvd.min 0'
+	echo 'icprcvd.max 50000'
+	echo 'icprcvd.graph no'
+	echo 'icpsend.negative icprcvd'
+	echo 'icpsend.label icp requests'
+	echo 'icpsend.info ICP requests recieved (-) and ICP requests sent (+)'
+	echo 'icpsend.type DERIVE'
+	echo 'icpsend.min 0'
+	echo 'icpsend.max 50000'
+	echo 'icpsend.draw LINE1'
+	echo 'icpsend.colour 00BD39'
+	#echo 'icpsend.colour COLOUR3'
+
+        exit 0
+fi
+
+# get data
+#curl -s ${squidhost:-localhost}:${squidport:-3128}/squid-internal-mgr/counters | while read line
+squidclient -h ${squidhost:-localhost} -p ${squidport:-3128} mgr:counters | while read line
+do
+	if [[ "$line" == "client_http.requests"* ]]; then
+		echo 'creqs.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "client_http.hits"* ]]; then
+		echo 'chits.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "client_http.errors"* ]]; then
+		echo 'cerrs.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "server.all.requests"* ]]; then
+		echo 'sreqs.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "server.all.errors"* ]]; then
+		echo 'serrs.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "icp.queries_recv"* ]]; then
+		echo 'icprcvd.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "icp.queries_sent"* ]]; then
+		echo 'icpsend.value'$(echo $line | cut -f2 -d "=")
+	fi
+done

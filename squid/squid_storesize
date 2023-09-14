@@ -1,0 +1,52 @@
+#! /bin/bash
+
+##############
+# Munin plugin to report squid store size
+
+if [ "$1" = "config" ]; then
+        # basic
+        echo 'graph_title Cache store size'
+        echo 'graph_category squid'
+	echo 'graph_vlabel bytes'
+        echo 'graph_info reports squid cache store size'
+	echo 'graph_args --base 1024 -A'
+
+        # data sources
+	echo 'dirmax.label Store dir size'
+	echo 'dirmax.draw AREA'
+	echo 'dirmax.cdef dirmax,1024,*'
+	echo 'dirmax.colour 278CA8'
+	echo 'mem.label Memory Store used'
+	echo 'mem.draw STACK'
+	echo 'mem.cdef mem,1024,*'
+	echo 'mem.colour 00BD39'
+	echo 'diruse.label Store dir used'
+	echo 'diruse.draw AREA'
+	echo 'diruse.cdef diruse,1024,*'
+	echo 'diruse.colour 024C61'
+	#echo 'diruse.colour 1432AE'
+	#echo 'diruse.colour 3750B6'
+
+        exit 0
+fi
+
+# get data
+#curl -s ${squidhost:-localhost}:${squidport:-3128}/squid-internal-mgr/info | while read line
+squidclient -h ${squidhost:-localhost} -p ${squidport:-3128} mgr:info | while read line
+do
+	if [[ "$line" == "Storage Mem size:"* ]]; then
+		echo 'mem.value '$(echo $line | cut -f4 -d " ")
+	#elif [[ "$line" == "Hits as % of bytes sent:"* ]]; then
+	fi
+done
+
+#curl -s ${squidhost:-localhost}:${squidport:-3128}/squid-internal-mgr/storedir | while read line
+squidclient -h ${squidhost:-localhost} -p ${squidport:-3128} mgr:storedir | while read line
+do
+	#if [[ "$line" == "Store Directory #"* ]]; then
+	if [[ "$line" == "Maximum Swap Size"* ]]; then
+		echo 'dirmax.value '$(echo $line | cut -f5 -d " ")
+	elif [[ "$line" == "Current Store Swap Size"* ]]; then
+		echo 'diruse.value '$(echo $line | cut -f5 -d " ")
+	fi
+done

@@ -1,0 +1,52 @@
+#! /bin/bash
+
+##############
+# Munin plugin to report cache swapin/out
+
+if [ "$1" = "config" ]; then
+        # basic
+        echo 'graph_title Cache store operations'
+        echo 'graph_category squid'
+	echo 'graph_vlabel per ${graph_period}'
+        echo 'graph_info reports swapin/out ops'
+
+        # data sources
+	echo 'swapin.label swap (in/out)'
+	echo 'swapin.info objects swapped out to disk store (+) or into memory (-)'
+	echo 'swapin.type DERIVE'
+	echo 'swapin.min 0'
+	echo 'swapin.max 50000'
+	echo 'swapin.graph no'
+
+	echo 'swapout.negative swapin'
+	echo 'swapout.label swap (in/out)'
+	echo 'swapout.info objects swapped out to disk store (+) or into memory (-)'
+	echo 'swapout.type DERIVE'
+	echo 'swapout.min 0'
+	echo 'swapout.max 50000'
+
+#	echo '.draw AREA'
+#	echo '.colour 057D9F'
+	#echo 'sreqs.colour COLOUR1'
+
+	echo 'unlink.label unlink'
+	echo 'unlink.info unlink requests'
+	echo 'unlink.type DERIVE'
+	echo 'unlink.min 0'
+	echo 'unlink.max 50000'
+
+        exit 0
+fi
+
+# get data
+#curl -s ${squidhost:-localhost}:${squidport:-3128}/squid-internal-mgr/counters | while read line
+squidclient -h ${squidhost:-localhost} -p ${squidport:-3128} mgr:counters | while read line
+do
+	if [[ "$line" == "swap.ins"* ]]; then
+		echo 'swapin.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "swap.outs"* ]]; then
+		echo 'swapout.value'$(echo $line | cut -f2 -d "=")
+	elif [[ "$line" == "unlink.requests"* ]]; then
+		echo 'unlink.value'$(echo $line | cut -f2 -d "=")
+	fi
+done

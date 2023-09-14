@@ -1,0 +1,62 @@
+#! /bin/bash
+
+##############
+# Munin plugin to report mean service times from squid
+
+if [ "$1" = "config" ]; then
+        # basic
+        echo 'graph_title Median service times'
+        echo 'graph_category squid'
+	echo 'graph_vlabel seconds'
+        echo 'graph_info reports mean service times'
+
+        # data sources
+        echo 'http.label HTTP Requests (All)'
+        echo 'http.draw LINE1'
+	echo 'http.colour 057D9F'
+	#echo 'http.colour COLOUR1'
+        echo 'miss.label Cache Misses'
+        echo 'miss.draw LINE1'
+	echo 'miss.colour COLOUR3'
+	#echo 'miss.colour COLOUR2'
+        echo 'hits.label Cache Hits'
+        echo 'hits.draw LINE1'
+	echo 'hits.colour FF8100'
+	#echo 'hits.colour COLOUR0'
+        echo 'near.label Near Misses'
+        echo 'near.draw LINE1'
+	echo 'near.colour COLOUR4'
+        echo 'nm.label Not-Modified'
+        echo 'nm.draw LINE1'
+	echo 'nm.colour COLOUR5'
+        echo 'dns.label DNS Lookups'
+        echo 'dns.draw LINE1'
+	echo 'dns.colour 007323'
+	#echo 'dns.colour COLOUR6'
+        echo 'icp.label ICP Queries'
+        echo 'icp.draw LINE1'
+	echo 'icp.colour 00BD39'
+	#echo 'icp.colour COLOUR3'
+        exit 0
+fi
+
+# get data
+#curl -s ${squidhost:-localhost}:${squidport:-3128}/squid-internal-mgr/info | while read line
+squidclient -h ${squidhost:-localhost} -p ${squidport:-3128} mgr:info | while read line
+do
+	if [[ "$line" == "HTTP Requests (All):"* ]]; then
+		echo 'http.value '$(echo $line |cut -f2 -d ":" |cut -f2 -d " ")
+	elif [[ "$line" == "Cache Misses:"* ]]; then
+		echo 'miss.value '$(echo $line |cut -f2 -d ":" |cut -f2 -d " ")
+	elif [[ "$line" == "Cache Hits:"* ]]; then
+		echo 'hits.value '$(echo $line |cut -f2 -d ":" |cut -f2 -d " ")
+	elif [[ "$line" == "Near Hits:"* ]]; then
+		echo 'near.value '$(echo $line |cut -f2 -d ":" |cut -f2 -d " ")
+	elif [[ "$line" == "Not-Modified Replies:"* ]]; then
+		echo 'nm.value '$(echo $line |cut -f2 -d ":" |cut -f2 -d " ")
+	elif [[ "$line" == "DNS Lookups:"* ]]; then
+		echo 'dns.value '$(echo $line |cut -f2 -d ":" |cut -f2 -d " ")
+	elif [[ "$line" == "ICP Queries:"* ]]; then
+		echo 'icp.value '$(echo $line |cut -f2 -d ":" |cut -f2 -d " ")
+	fi
+done
